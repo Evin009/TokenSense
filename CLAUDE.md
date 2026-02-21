@@ -115,7 +115,7 @@ User Input (CLI / Web)
 | API key env var   | `TOKENSENSE_API_KEY`                               |
 | Backend port      | `8000`                                             |
 | Frontend port     | `3000`                                             |
-| Vector DB port    | `5439` (Actian default)                            |
+| Vector DB port    | `50051` (Actian gRPC, no auth required)            |
 | Token budget      | `8000` tokens (configurable)                       |
 | Embedding model   | OpenRouter — `openai/text-embedding-ada-002`       |
 | Default LLM       | OpenRouter auto-routing                            |
@@ -171,13 +171,16 @@ TokenSense/
 ## Environment Variables Required
 
 ```bash
-# backend/.env (copy from .env.example)
+# .env (copy from .env.example)
 TOKENSENSE_API_KEY=your-secret-api-key
 OPENROUTER_API_KEY=sk-or-...
 GEMINI_API_KEY=AIza...
+
+# Actian VectorAI DB — gRPC, no auth required
 ACTIAN_HOST=localhost
-ACTIAN_PORT=5439
-ACTIAN_DB=tokensense
-ACTIAN_USER=actian
-ACTIAN_PASSWORD=...
+ACTIAN_PORT=50051
 ```
+
+> **Actian client install:** Download `actiancortex-0.1.0b1-py3-none-any.whl` from
+> https://github.com/hackmamba-io/actian-vectorAI-db-beta and run:
+> `pip install actiancortex-0.1.0b1-py3-none-any.whl`
