@@ -127,7 +127,7 @@ async def run_tests():
 
         # ── 6. Search — exact match ───────────────────────────────────────────
         section("6. Search — Exact Match")
-        results = await client.search(COLLECTION, query=VEC_A, top_k=1)
+        results = await client.search(COLLECTION, query=VEC_A, top_k=1, with_payload=True)
         if not results:
             fail("Search returned 0 results for VEC_A")
         top = results[0]
@@ -138,7 +138,7 @@ async def run_tests():
 
         # ── 7. Search — top-k ordering ────────────────────────────────────────
         section("7. Search — top-k Ordering")
-        results = await client.search(COLLECTION, query=VEC_B, top_k=3)
+        results = await client.search(COLLECTION, query=VEC_B, top_k=3, with_payload=True)
         if len(results) < 2:
             fail(f"Expected ≥ 2 results, got {len(results)}")
         scores = [r.score for r in results]
@@ -148,7 +148,7 @@ async def run_tests():
 
         # ── 8. Search — payload retrieval ─────────────────────────────────────
         section("8. Payload Retrieval")
-        results = await client.search(COLLECTION, query=VEC_A, top_k=1)
+        results = await client.search(COLLECTION, query=VEC_A, top_k=1, with_payload=True)
         payload = results[0].payload
         if "content" not in payload or "source" not in payload:
             fail(f"Payload missing keys: {payload}")
