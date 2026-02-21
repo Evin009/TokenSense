@@ -1,0 +1,48 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "tokensense"
+version = "0.1.0"
+description = "AI orchestration engine — semantic retrieval, context compression, and intelligent model routing"
+readme = "README.md"
+license = {file = "LICENSE"}
+requires-python = ">=3.11"
+authors = [
+    {name = "TokenSense Team", email = "hello@tokensense.dev"},
+]
+keywords = ["ai", "llm", "context-optimization", "vector-database", "token-reduction"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+dependencies = [
+    "typer>=0.12.3",
+    "httpx>=0.28.1",
+    "rich>=13.7.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+]
+
+[project.scripts]
+tokensense = "tokensense.cli:app"
+
+[project.urls]
+Homepage = "https://github.com/yourusername/TokenSense"
+Documentation = "https://github.com/yourusername/TokenSense/tree/main/docs"
+Repository = "https://github.com/yourusername/TokenSense"
+Issues = "https://github.com/yourusername/TokenSense/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["tokensense"]
