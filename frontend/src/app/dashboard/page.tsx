@@ -220,25 +220,30 @@ function Sidebar({
 
 const STORAGE_KEY = "tokensense_api_key"
 
-function generateKey(): string {
-  const hex = () => Math.floor(Math.random() * 0xffffffff).toString(16).padStart(8, "0")
-  return `ts-${hex()}-${hex()}-${hex()}-${hex()}`
-}
-
 function ApiKeysPanel() {
   const [apiKey, setApiKey] = useState("")
   const [copied, setCopied] = useState(false)
-  const [createdAt] = useState(() => new Date().toLocaleDateString())
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
+  const [createdAt, setCreatedAt] = useState("")
+
+  async function fetchKey() {
+    setLoading(true)
+    setError("")
+    try {
+      const res = await api.generateKey()
+      setApiKey(res.key)
+      setCreatedAt(new Date().toLocaleDateString())
+      localStorage.setItem(STORAGE_KEY, res.key)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to generate key")
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored) {
-      setApiKey(stored)
-    } else {
-      const fresh = generateKey()
-      localStorage.setItem(STORAGE_KEY, fresh)
-      setApiKey(fresh)
-    }
+    fetchKey()
   }, [])
 
   const handleCopy = () => {
@@ -248,9 +253,7 @@ function ApiKeysPanel() {
   }
 
   const handleRegenerate = () => {
-    const fresh = generateKey()
-    localStorage.setItem(STORAGE_KEY, fresh)
-    setApiKey(fresh)
+    fetchKey()
     setCopied(false)
   }
 
@@ -291,10 +294,15 @@ function ApiKeysPanel() {
         className="flex flex-col gap-4 p-6"
         style={{ background: "#0D0D12", border: "1px solid rgba(0,255,136,0.25)" }}
       >
+        {error && (
+          <p className="font-mono text-xs" style={{ color: "#EF4444" }}>
+            {error}
+          </p>
+        )}
         <div className="flex items-center justify-between">
           <div className="flex flex-col gap-0.5">
             <span className="text-ts-text font-mono text-xs font-bold">Default Key</span>
-            <span className="text-ts-dim font-mono text-xs">Created {createdAt}</span>
+            <span className="text-ts-dim font-mono text-xs">{createdAt ? `Created ${createdAt}` : ""}</span>
           </div>
           <span
             className="font-mono text-xs px-2 py-0.5"
@@ -317,11 +325,12 @@ function ApiKeysPanel() {
             className="font-mono text-sm flex-1 break-all"
             style={{ color: "#00FF88", letterSpacing: "0.5px" }}
           >
-            {apiKey || "generating…"}
+            {loading ? "generating…" : apiKey || "—"}
           </span>
           <button
             onClick={handleCopy}
-            className="flex items-center gap-1.5 px-3 py-1 font-mono text-xs font-bold shrink-0 transition-all"
+            disabled={loading || !apiKey}
+            className="flex items-center gap-1.5 px-3 py-1 font-mono text-xs font-bold shrink-0 transition-all disabled:opacity-50"
             style={{
               color: copied ? "#050508" : "#00FF88",
               background: copied ? "#00FF88" : "rgba(0,255,136,0.08)",
@@ -338,7 +347,8 @@ function ApiKeysPanel() {
           </p>
           <button
             onClick={handleRegenerate}
-            className="font-mono text-xs text-ts-muted hover:text-ts-accent transition-colors shrink-0"
+            disabled={loading}
+            className="font-mono text-xs text-ts-muted hover:text-ts-accent transition-colors shrink-0 disabled:opacity-50"
           >
             ↻ Regenerate
           </button>

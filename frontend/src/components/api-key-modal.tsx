@@ -1,13 +1,9 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { api } from "@/lib/api"
 
 const STORAGE_KEY = "tokensense_api_key"
-
-function generateKey(): string {
-  const hex = () => Math.floor(Math.random() * 0xffffffff).toString(16).padStart(8, "0")
-  return `ts-${hex()}-${hex()}-${hex()}-${hex()}`
-}
 
 interface ApiKeyModalProps {
   onClose: () => void
@@ -16,22 +12,29 @@ interface ApiKeyModalProps {
 export function ApiKeyModal({ onClose }: ApiKeyModalProps) {
   const [apiKey, setApiKey] = useState("")
   const [copied, setCopied] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+
+  async function fetchKey() {
+    setLoading(true)
+    setError("")
+    try {
+      const res = await api.generateKey()
+      setApiKey(res.key)
+      localStorage.setItem(STORAGE_KEY, res.key)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to generate key")
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored) {
-      setApiKey(stored)
-    } else {
-      const fresh = generateKey()
-      localStorage.setItem(STORAGE_KEY, fresh)
-      setApiKey(fresh)
-    }
+    fetchKey()
   }, [])
 
   const handleRegenerate = () => {
-    const fresh = generateKey()
-    localStorage.setItem(STORAGE_KEY, fresh)
-    setApiKey(fresh)
+    fetchKey()
     setCopied(false)
   }
 
@@ -74,6 +77,11 @@ export function ApiKeyModal({ onClose }: ApiKeyModalProps) {
         </div>
 
         {/* Key display */}
+        {error && (
+          <p className="font-mono text-xs" style={{ color: "#EF4444" }}>
+            {error}
+          </p>
+        )}
         <div
           className="flex items-center gap-3 px-4 py-3"
           style={{
@@ -85,7 +93,7 @@ export function ApiKeyModal({ onClose }: ApiKeyModalProps) {
             className="font-mono text-sm flex-1 break-all"
             style={{ color: "#00FF88", letterSpacing: "0.5px" }}
           >
-            {apiKey || "generating…"}
+            {loading ? "generating…" : apiKey || "—"}
           </span>
           <button
             onClick={handleCopy}
@@ -160,7 +168,8 @@ export function ApiKeyModal({ onClose }: ApiKeyModalProps) {
         <div className="flex items-center justify-between pt-2" style={{ borderTop: "1px solid #1E1E28" }}>
           <button
             onClick={handleRegenerate}
-            className="font-mono text-xs font-medium text-ts-muted hover:text-ts-text transition-colors"
+            disabled={loading}
+            className="font-mono text-xs font-medium text-ts-muted hover:text-ts-text transition-colors disabled:opacity-50"
           >
             ↻ Regenerate key
           </button>

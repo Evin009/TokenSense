@@ -13,6 +13,8 @@ TokenSense sits between you and any LLM backend, transparently optimizing every 
 - **Intelligent Routing** — Auto-selects the best model based on task complexity
 - **Multi-Backend** — Works with OpenRouter, Gemini, or any LLM API
 - **Full Telemetry** — Tracks tokens, cost, and latency for every query
+- **Web Dashboard** — Real-time analytics, model breakdown, token savings charts
+- **Per-User API Keys** — Generate and manage API keys via the dashboard or REST endpoint
 - **Three Interfaces** — CLI, Web UI, and REST API
 
 ---
@@ -37,25 +39,38 @@ pip install -e .
 
 ## Quick Start
 
-### 1. Start the backend and vector database
-
-TokenSense requires a FastAPI backend and Actian VectorAI DB. Clone the repo and run:
+### Option 1 — One command (Docker Compose)
 
 ```bash
-# Start Actian VectorAI DB (Docker)
+cp .env.example .env
+# Edit .env with your API keys
+docker-compose up
+```
+
+This starts the Actian VectorAI DB, FastAPI backend (port 8000), and Next.js frontend (port 3000) together.
+
+### Option 2 — Manual setup
+
+```bash
+# 1. Start Actian VectorAI DB
 docker run -d -p 50051:50051 actian/vectorai-db
 
-# Set environment variables
+# 2. Set environment variables
 cp .env.example .env
 # Edit .env with your API keys
 
-# Start the backend
+# 3. Start the backend
 cd backend
 pip install -r requirements.txt
 uvicorn main:app --reload --port 8000
+
+# 4. Start the frontend (separate terminal)
+cd frontend
+npm install
+npm run dev
 ```
 
-### 2. Configure the CLI
+### Configure the CLI
 
 ```bash
 tokensense init
@@ -63,13 +78,13 @@ tokensense init
 # API key: <your-tokensense-api-key>
 ```
 
-### 3. Index your codebase
+### Index your codebase
 
 ```bash
 tokensense index ./my-project
 ```
 
-### 4. Ask questions
+### Ask questions
 
 ```bash
 tokensense ask "how does the authentication flow work?"
@@ -91,7 +106,7 @@ Output:
 └──────────────┴──────────────┘
 ```
 
-### 5. View your savings
+### View your savings
 
 ```bash
 tokensense stats
@@ -110,36 +125,61 @@ tokensense stats
 
 ---
 
+## Web UI
+
+Open `http://localhost:3000` after starting the frontend.
+
+| Page | URL | Description |
+|---|---|---|
+| **Landing** | `/` | Overview, quick-start demo, agent pipeline visualization, impact metrics |
+| **Playground** | `/playground` | Interactive query interface with live token counter, response panel, and settings |
+| **Dashboard** | `/dashboard` | Telemetry charts, model usage breakdown, token savings over time, API key management |
+| **Docs** | `/docs` | Full documentation with search, table of contents, and code examples |
+
+---
+
 ## API Endpoints
 
 Once the backend is running on `http://localhost:8000`:
-
-### `POST /index`
-```bash
-curl -X POST http://localhost:8000/index \
-  -H "X-API-Key: your-key" \
-  -d '{"path": "./my-app", "file_extensions": [".py", ".ts"]}'
-```
 
 ### `POST /ask`
 ```bash
 curl -X POST http://localhost:8000/ask \
   -H "X-API-Key: your-key" \
+  -H "Content-Type: application/json" \
   -d '{"query": "explain the auth flow", "token_budget": 8000}'
 ```
 
+### `POST /index`
+```bash
+curl -X POST http://localhost:8000/index \
+  -H "X-API-Key: your-key" \
+  -H "Content-Type: application/json" \
+  -d '{"path": "./my-app", "file_extensions": [".py", ".ts"]}'
+```
+
 ### `POST /optimize`
-Context optimization only (no LLM call):
+Context optimization only — no LLM call:
 ```bash
 curl -X POST http://localhost:8000/optimize \
   -H "X-API-Key: your-key" \
+  -H "Content-Type: application/json" \
   -d '{"query": "describe the routing agent", "token_budget": 8000}'
 ```
 
 ### `GET /stats`
 ```bash
-curl http://localhost:8000/stats?limit=20 \
+curl "http://localhost:8000/stats?limit=20" \
   -H "X-API-Key: your-key"
+```
+
+### `POST /keys`
+Generate a per-user API key:
+```bash
+curl -X POST http://localhost:8000/keys \
+  -H "X-API-Key: your-key" \
+  -H "Content-Type: application/json" \
+  -d '{"label": "my-app"}'
 ```
 
 ---
@@ -165,16 +205,20 @@ User Input (CLI / Web)
 |---|---|
 | **CLI** | Typer + httpx + rich |
 | **Backend** | FastAPI + Python 3.11+ |
-| **Vector DB** | Actian VectorAI DB (Docker) |
+| **Vector DB** | Actian VectorAI DB (Docker, gRPC) |
 | **Model Routing** | OpenRouter API |
 | **Fallback LLM** | Gemini API |
-| **Frontend** | Next.js 14 + React 18 + Tailwind CSS (planned) |
+| **Frontend** | Next.js 14 + React 19 + Tailwind CSS v4 |
+| **Animations** | framer-motion |
+| **Charts** | recharts |
+| **Icons** | lucide-react |
+| **Telemetry DB** | SQLite (via aiosqlite) |
 
 ---
 
 ## Environment Variables
 
-Create a `.env` file in the `backend/` directory:
+Copy `.env.example` to `.env` and fill in your keys:
 
 ```bash
 TOKENSENSE_API_KEY=your-secret-api-key
@@ -188,21 +232,49 @@ ACTIAN_PORT=50051
 
 ## Development
 
-### Run tests
+### Start everything with one script
 
 ```bash
-# Backend + Actian integration tests
-cd tests
-python test_actian_via_api.py
-python test_actian_direct.py
+bash dev.sh
 ```
 
-### Build the package locally
+### Run tests
+
+**Backend (pytest) — 105 tests, fully mocked, no real API keys needed:**
+```bash
+pip install -r tests/backend/requirements-test.txt
+pytest tests/backend/ -v
+```
+
+**Frontend (Jest + React Testing Library):**
+```bash
+cd tests/frontend
+npm install
+npm test
+```
+
+**End-to-end (Playwright) — requires running dev server:**
+```bash
+# Terminal 1
+cd backend && uvicorn main:app --reload --port 8000
+
+# Terminal 2
+cd frontend && npm run dev
+
+# Terminal 3
+cd tests/e2e
+npm install
+npx playwright test
+```
+
+See `tests/README.md` for full test documentation.
+
+### Build the CLI package locally
 
 ```bash
 pip install build
 python -m build
-pip install dist/tokensense-0.1.0-py3-none-any.whl
+pip install dist/tokensense-0.1.3-py3-none-any.whl
 ```
 
 ---
