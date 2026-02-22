@@ -18,7 +18,7 @@ services:
     depends_on:
       - actian
     ports:
-      - "8000"
+      - "8000:8000"
     restart: unless-stopped
 
   # frontend: Uncomment after Phase 3 (Next.js) is built
@@ -27,27 +27,28 @@ services:
   #     context: ./frontend
   #     dockerfile: Dockerfile
   #   environment:
-  #     - NEXT_PUBLIC_API_URL=https://api.tokensense.dev
+  #     - NEXT_PUBLIC_API_URL=http://<VULTR_IP>:8000
   #   depends_on:
   #     - backend
   #   ports:
-  #     - "3000"
+  #     - "3000:3000"
   #   restart: unless-stopped
 
-  caddy:
-    image: caddy:2-alpine
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./deploy/Caddyfile:/etc/caddy/Caddyfile
-      - caddy_data:/data
-      - caddy_config:/config
-    depends_on:
-      - backend
-    restart: unless-stopped
+  # Caddy: Uncomment if using a domain with HTTPS
+  # caddy:
+  #   image: caddy:2-alpine
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./deploy/Caddyfile:/etc/caddy/Caddyfile
+  #     - caddy_data:/data
+  #     - caddy_config:/config
+  #   depends_on:
+  #     - backend
+  #   restart: unless-stopped
 
 volumes:
   actian_data:
-  caddy_data:
-  caddy_config:
+  # caddy_data:
+  # caddy_config:
