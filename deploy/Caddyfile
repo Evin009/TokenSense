@@ -1,0 +1,7 @@
+api.tokensense.dev {
+    reverse_proxy backend:8000
+}
+
+tokensense.dev {
+    reverse_proxy frontend:3000
+}
