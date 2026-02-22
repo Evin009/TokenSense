@@ -529,7 +529,7 @@ export default function LandingPage() {
             className="font-mono text-xs font-medium opacity-65"
             style={{ color: "#94A3B8", letterSpacing: "0.8px" }}
           >
-            v1.0.0 | OpenRouter · Gemini · Actian VectorAI
+            v0.1.4 | OpenRouter · Gemini · Actian VectorAI
           </motion.p>
         </motion.div>
       </section>

@@ -21,7 +21,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="TokenSense API",
     description="AI orchestration engine — semantic retrieval, context compression, model routing.",
-    version="0.1.0",
+    version="0.1.4",
     lifespan=lifespan,
 )
 
@@ -46,4 +46,4 @@ app.include_router(stats_router.router, prefix="/stats", tags=["Stats"])
 
 @app.get("/", tags=["Health"])
 async def health():
-    return {"status": "ok", "service": "TokenSense", "version": "0.1.0"}
+    return {"status": "ok", "service": "TokenSense", "version": "0.1.4"}
