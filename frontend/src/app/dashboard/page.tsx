@@ -692,13 +692,48 @@ export default function DashboardPage() {
         {/* Error */}
         {error && (
           <div
-            className="flex items-center gap-3 p-4"
+            className="flex flex-col gap-3 p-4"
             style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)" }}
           >
-            <span className="text-ts-error font-mono text-sm">{error}</span>
-            <button onClick={fetchStats} className="text-ts-accent font-mono text-xs underline ml-auto">
-              Retry
-            </button>
+            <div className="flex items-center gap-3">
+              <span className="text-ts-error font-mono text-sm">{error}</span>
+              <button onClick={fetchStats} className="text-ts-accent font-mono text-xs underline ml-auto shrink-0">
+                Retry
+              </button>
+            </div>
+
+            {/* Invalid key helper — clears stale localStorage key so .env.local takes over */}
+            {(error.toLowerCase().includes("invalid") || error.toLowerCase().includes("401") || error.toLowerCase().includes("api key")) && (
+              <div
+                className="flex items-center justify-between gap-4 px-4 py-3"
+                style={{ background: "rgba(0,255,136,0.05)", border: "1px solid rgba(0,255,136,0.2)" }}
+              >
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-ts-text font-mono text-xs font-bold">API key mismatch</span>
+                  <span className="text-ts-muted font-mono text-xs">
+                    A custom key saved in the browser is overriding{" "}
+                    <code className="text-ts-accent">.env.local</code>.
+                    Reset to use the environment key.
+                  </span>
+                </div>
+                <button
+                  onClick={() => {
+                    localStorage.removeItem("ts_api_key")
+                    localStorage.removeItem("ts_api_url")
+                    fetchStats()
+                    checkHealth()
+                  }}
+                  className="shrink-0 px-3 py-1.5 font-mono text-xs font-bold transition-colors"
+                  style={{
+                    background: "rgba(0,255,136,0.12)",
+                    border: "1px solid #00FF88",
+                    color: "#00FF88",
+                  }}
+                >
+                  ↺ Reset to env key
+                </button>
+              </div>
+            )}
           </div>
         )}
 
