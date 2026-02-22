@@ -20,7 +20,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-__version__ = "0.1.3"
+__version__ = "0.1.4"
 
 
 def _version_callback(value: bool) -> None:
@@ -131,9 +131,12 @@ def index(
         typer.echo(f"Path not found or not a directory: {root_path}", err=True)
         raise typer.Exit(1)
 
+    _SKIP_DIRS = {"node_modules", ".next", ".git", "__pycache__", ".venv", "venv", ".idea", ".vscode", "dist", "build"}
+
     files: list[dict] = []
     with console.status("[bold cyan]Reading files…[/bold cyan]"):
-        for dirpath, _, filenames in os.walk(root_path):
+        for dirpath, dirnames, filenames in os.walk(root_path):
+            dirnames[:] = [d for d in dirnames if d not in _SKIP_DIRS]
             for filename in filenames:
                 if not any(filename.endswith(ext) for ext in ext_list):
                     continue
@@ -153,7 +156,14 @@ def index(
         typer.echo("No matching files found to index.", err=True)
         raise typer.Exit(1)
 
-    console.print(f"[dim]Found {len(files)} file(s). Sending to TokenSense…[/dim]")
+    n = len(files)
+    if n > 2000:
+        console.print(
+            f"[yellow]Warning:[/yellow] Found {n} files. Indexing may be slow or timeout. "
+            "Consider indexing a subdirectory (e.g. ./src) or limiting extensions with --ext."
+        )
+
+    console.print(f"[dim]Found {n} file(s). Sending to TokenSense…[/dim]")
 
     with console.status("[bold cyan]Indexing…[/bold cyan]"):
         try:
@@ -168,6 +178,15 @@ def index(
                 f"Could not connect to {config['api_url']}. Is the backend running?",
                 err=True,
             )
+            raise typer.Exit(1)
+        except httpx.TimeoutException:
+            typer.echo(
+                "Request timed out. Try indexing a smaller directory (e.g. ./src) or use --ext to limit file types.",
+                err=True,
+            )
+            raise typer.Exit(1)
+        except httpx.HTTPError as e:
+            typer.echo(f"Request failed: {e}", err=True)
             raise typer.Exit(1)
 
     _handle_http_error(resp)
