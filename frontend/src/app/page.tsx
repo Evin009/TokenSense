@@ -3,10 +3,11 @@
 import Link from "next/link"
 import { motion, Variants, useInView } from "framer-motion"
 import { useRef, useState, useEffect } from "react"
-import { Copy, Check } from "lucide-react"
+import { Copy, Check, KeyRound, Loader2 } from "lucide-react"
 import { Navbar } from "@/components/navbar"
 import { HeroBg } from "@/components/hero-bg"
 import { CursorGlow } from "@/components/cursor-glow"
+import { api } from "@/lib/api"
 
 // ── Easing ────────────────────────────────────────────────────
 
@@ -295,6 +296,151 @@ const CLI_LINES = [
   { prompt: false, text: "The authentication flow uses verify_api_key middleware..." },
 ]
 
+// ── Get API Key Component ─────────────────────────────────────
+
+function GetApiKey() {
+  const [state, setState] = useState<"idle" | "loading" | "done" | "error">("idle")
+  const [key, setKey] = useState("")
+  const [copied, setCopied] = useState(false)
+  const [error, setError] = useState("")
+
+  async function handleGenerate() {
+    setState("loading")
+    setError("")
+    try {
+      const res = await api.generateKey()
+      setKey(res.key)
+      setState("done")
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Something went wrong")
+      setState("error")
+    }
+  }
+
+  function handleCopy() {
+    navigator.clipboard.writeText(key).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+
+  return (
+    <motion.section
+      initial="hidden"
+      whileInView="show"
+      viewport={{ once: true, margin: "-60px" }}
+      variants={staggerContainer}
+      className="flex flex-col items-center gap-8 px-16 py-20"
+      style={{ background: "linear-gradient(180deg, #050508 0%, #0C0C11 100%)", borderTop: "1px solid #1E1E28" }}
+    >
+      <motion.div variants={fadeUp} className="flex items-center gap-2">
+        <KeyRound size={14} style={{ color: "#00FF88" }} />
+        <span className="text-ts-accent font-mono text-xs font-bold tracking-[1.5px]">FREE ACCESS</span>
+      </motion.div>
+
+      <motion.h2 variants={clipReveal} className="text-ts-text font-mono text-3xl font-bold text-center">
+        Get Your API Key
+      </motion.h2>
+
+      <motion.p variants={fadeUp} className="font-mono text-sm text-center max-w-[520px] leading-relaxed" style={{ color: "#94A3B8" }}>
+        Generate a free key and start using the hosted TokenSense demo server instantly — no sign-up required.
+      </motion.p>
+
+      {state !== "done" && (
+        <motion.button
+          variants={scaleIn}
+          onClick={handleGenerate}
+          disabled={state === "loading"}
+          className="flex items-center gap-3 font-mono text-sm font-bold px-8 py-4 transition-all"
+          style={{
+            background: state === "loading" ? "rgba(0,255,136,0.06)" : "#00FF88",
+            color: state === "loading" ? "#00FF88" : "#050508",
+            border: "1px solid #00FF88",
+            opacity: state === "loading" ? 0.7 : 1,
+            cursor: state === "loading" ? "not-allowed" : "pointer",
+          }}
+          whileHover={state !== "loading" ? { scale: 1.03, boxShadow: "0 0 24px rgba(0,255,136,0.3)" } : {}}
+          whileTap={state !== "loading" ? { scale: 0.97 } : {}}
+        >
+          {state === "loading" ? (
+            <><Loader2 size={15} className="animate-spin" /> GENERATING…</>
+          ) : (
+            <><KeyRound size={15} /> GENERATE FREE KEY</>
+          )}
+        </motion.button>
+      )}
+
+      {state === "error" && (
+        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="font-mono text-xs" style={{ color: "#EF4444" }}>
+          {error}
+        </motion.p>
+      )}
+
+      {state === "done" && (
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, ease: EASE }}
+          className="flex flex-col items-center gap-5 w-full max-w-[640px]"
+        >
+          {/* Key display box */}
+          <div
+            className="flex items-center justify-between gap-4 px-6 py-4 w-full"
+            style={{ background: "#0A1A10", border: "1px solid #00FF88" }}
+          >
+            <span className="font-mono text-sm font-semibold truncate" style={{ color: "#00FF88" }}>
+              {key}
+            </span>
+            <button
+              onClick={handleCopy}
+              className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 font-mono text-xs font-semibold transition-all"
+              style={{
+                color: copied ? "#050508" : "#00FF88",
+                background: copied ? "#00FF88" : "rgba(0,255,136,0.08)",
+                border: "1px solid rgba(0,255,136,0.35)",
+              }}
+            >
+              {copied ? <><Check size={12} strokeWidth={2.5} /> Copied!</> : <><Copy size={12} strokeWidth={2} /> Copy</>}
+            </button>
+          </div>
+
+          {/* Usage instructions */}
+          <div
+            className="w-full px-6 py-5 flex flex-col gap-3"
+            style={{ background: "#0D0D12", border: "1px solid #1E1E28" }}
+          >
+            <span className="text-ts-muted font-mono text-xs font-bold tracking-wider">USE THIS KEY</span>
+            <div className="flex flex-col gap-2">
+              {[
+                "pip install tokensense",
+                "tokensense init --demo",
+                `tokensense index ./my-project`,
+                `tokensense ask "how does auth work?"`,
+              ].map((cmd) => (
+                <div key={cmd} className="flex items-center gap-2">
+                  <span className="text-ts-accent font-mono text-xs shrink-0">$</span>
+                  <span className="font-mono text-xs" style={{ color: "#CBD5E1" }}>{cmd}</span>
+                </div>
+              ))}
+            </div>
+            <p className="font-mono text-xs mt-1" style={{ color: "#6B6B7B" }}>
+              When prompted for an API key, paste the key above.
+            </p>
+          </div>
+
+          <button
+            onClick={() => { setState("idle"); setKey(""); }}
+            className="font-mono text-xs underline opacity-50 hover:opacity-80 transition-opacity"
+            style={{ color: "#94A3B8" }}
+          >
+            Generate another key
+          </button>
+        </motion.div>
+      )}
+    </motion.section>
+  )
+}
+
 // ── Landing Page ──────────────────────────────────────────────
 
 export default function LandingPage() {
@@ -404,9 +550,12 @@ export default function LandingPage() {
         </motion.h2>
         <CopyCommand text="pip install tokensense" />
         <motion.p variants={fadeUp} className="font-mono text-sm opacity-80" style={{ color: "#94A3B8" }}>
-          Published to PyPI • v0.1.1 • Python 3.11+
+          Published to PyPI • v0.1.2 • Python 3.11+
         </motion.p>
       </motion.section>
+
+      {/* ── Get API Key ────────────────────────────────────── */}
+      <GetApiKey />
 
       {/* ── Stats Ticker ───────────────────────────────────── */}
       <div

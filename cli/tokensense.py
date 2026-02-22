@@ -9,6 +9,7 @@ Usage:
 """
 
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -19,7 +20,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-__version__ = "0.1.1"
+__version__ = "0.1.3"
 
 
 def _version_callback(value: bool) -> None:
@@ -95,13 +96,17 @@ def init(
     if demo:
         api_url = _DEMO_URL
         console.print(f"[dim]Using hosted API: {api_url}[/dim]")
+        api_key = typer.prompt(
+            "API key (get one at the website, or press Enter for demo)",
+            default="demo",
+            show_default=False,
+        )
     else:
         api_url = typer.prompt("API URL", default=_DEFAULT_URL)
-
-    api_key = typer.prompt("API key", hide_input=True)
+        api_key = typer.prompt("API key", hide_input=True)
 
     _CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-    config = {"api_url": api_url.rstrip("/"), "api_key": api_key}
+    config = {"api_url": api_url.rstrip("/"), "api_key": api_key or "demo"}
     with _CONFIG_FILE.open("w") as f:
         json.dump(config, f, indent=2)
 
@@ -117,16 +122,45 @@ def index(
         help="Comma-separated list of file extensions to index",
     ),
 ) -> None:
-    """Walk a local directory and index its files into the vector database."""
+    """Read a local directory and send its files to TokenSense for indexing."""
     config = _load_config()
     ext_list = [e.strip() for e in extensions.split(",")]
+    root_path = os.path.abspath(path)
 
-    with console.status("[bold cyan]Indexing files…[/bold cyan]"):
+    if not os.path.isdir(root_path):
+        typer.echo(f"Path not found or not a directory: {root_path}", err=True)
+        raise typer.Exit(1)
+
+    files: list[dict] = []
+    with console.status("[bold cyan]Reading files…[/bold cyan]"):
+        for dirpath, _, filenames in os.walk(root_path):
+            for filename in filenames:
+                if not any(filename.endswith(ext) for ext in ext_list):
+                    continue
+                filepath = os.path.join(dirpath, filename)
+                try:
+                    with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
+                        content = f.read()
+                    if content.strip():
+                        files.append({
+                            "source": os.path.relpath(filepath, root_path),
+                            "content": content,
+                        })
+                except Exception:
+                    continue
+
+    if not files:
+        typer.echo("No matching files found to index.", err=True)
+        raise typer.Exit(1)
+
+    console.print(f"[dim]Found {len(files)} file(s). Sending to TokenSense…[/dim]")
+
+    with console.status("[bold cyan]Indexing…[/bold cyan]"):
         try:
             resp = httpx.post(
                 f"{config['api_url']}/index",
                 headers=_api_headers(config),
-                json={"path": path, "file_extensions": ext_list},
+                json={"files": files},
                 timeout=300.0,
             )
         except httpx.ConnectError:

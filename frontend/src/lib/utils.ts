@@ -30,7 +30,7 @@ export function formatTokens(n: number): string {
 }
 
 export function formatPct(n: number): string {
-  return `${n.toFixed(1)}%`
+  return `${(Math.round(n * 10) / 10).toFixed(1)}%`
 }
 
 export function estimateTokens(text: string): number {

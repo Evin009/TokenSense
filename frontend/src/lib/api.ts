@@ -2,7 +2,7 @@ import type {
   AskRequest, AskResponse,
   OptimizeRequest, OptimizeResponse,
   IndexRequest, IndexResponse,
-  StatsResponse, HealthResponse,
+  StatsResponse, HealthResponse, KeyResponse,
 } from "./types"
 
 const DEMO_URL = "http://108.61.192.150:8000"
@@ -79,4 +79,17 @@ export const api = {
 
   healthCheck: () =>
     request<HealthResponse>("/"),
+
+  generateKey: (label = "") =>
+    fetch(`${DEMO_URL}/keys`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ label }),
+    }).then(async (res) => {
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: `HTTP ${res.status}` }))
+        throw new Error(err.detail || "Failed to generate key")
+      }
+      return res.json() as Promise<KeyResponse>
+    }),
 }

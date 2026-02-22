@@ -1,6 +1,6 @@
 """TokenSense — AI orchestration engine."""
 
-__version__ = "0.1.1"
+__version__ = "0.1.3"
 
 from .cli import app
 

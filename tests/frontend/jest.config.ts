@@ -5,11 +5,17 @@ const config: Config = {
   testEnvironment: "jsdom",
   rootDir: ".",
   testMatch: ["**/__tests__/**/*.test.{ts,tsx}"],
-  setupFilesAfterFramework: ["<rootDir>/jest.setup.ts"],
+  setupFilesAfterEnv: ["<rootDir>/jest.setup.ts"],
 
   // Map @/ to the actual Next.js source tree
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/../../frontend/src/$1",
+
+    // Pin React to one copy so hooks don't break (test vs frontend node_modules version mismatch)
+    "^react$": "<rootDir>/node_modules/react",
+    "^react/(.*)$": "<rootDir>/node_modules/react/$1",
+    "^react-dom$": "<rootDir>/node_modules/react-dom",
+    "^react-dom/(.*)$": "<rootDir>/node_modules/react-dom/$1",
 
     // Stub Next.js internals so we don't need the full Next.js package here
     "^next/link$": "<rootDir>/mocks/next-link.tsx",

@@ -70,6 +70,12 @@ export type HealthResponse = {
   version: string
 }
 
+export type KeyResponse = {
+  key: string
+  label: string
+  message: string
+}
+
 // ── UI State Types ───────────────────────────────────────────
 export type PlaygroundState =
   | { status: "idle" }

@@ -19,6 +19,8 @@ services:
       - actian
     ports:
       - "8000:8000"
+    volumes:
+      - backend_data:/app/data
     restart: unless-stopped
 
   frontend:
@@ -49,5 +51,6 @@ services:
 
 volumes:
   actian_data:
+  backend_data:
   # caddy_data:
   # caddy_config:
