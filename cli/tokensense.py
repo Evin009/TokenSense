@@ -66,10 +66,20 @@ def _handle_http_error(resp: httpx.Response) -> None:
 # ---------------------------------------------------------------------------
 
 
+_DEMO_URL = "https://api.tokensense.dev"
+
+
 @app.command()
-def init() -> None:
+def init(
+    demo: bool = typer.Option(False, "--demo", help="Use the hosted TokenSense API (no local setup required)"),
+) -> None:
     """Configure the API URL and key. Saves to ~/.tokensense/config."""
-    api_url = typer.prompt("API URL", default=_DEFAULT_URL)
+    if demo:
+        api_url = _DEMO_URL
+        console.print(f"[dim]Using hosted API: {api_url}[/dim]")
+    else:
+        api_url = typer.prompt("API URL", default=_DEFAULT_URL)
+
     api_key = typer.prompt("API key", hide_input=True)
 
     _CONFIG_DIR.mkdir(parents=True, exist_ok=True)

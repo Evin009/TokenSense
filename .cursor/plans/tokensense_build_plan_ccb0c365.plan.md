@@ -32,6 +32,9 @@ todos:
   - id: local-dev-setup
     content: Create start scripts (dev.sh) and document local setup including Docker for Actian VectorAI DB only
     status: pending
+  - id: vultr-deployment
+    content: "Deploy full stack to Vultr: Dockerfile, docker-compose.yml, Caddyfile, Vultr instance, firewall, domain DNS, CLI --demo flag"
+    status: pending
 isProject: false
 ---
 
@@ -84,18 +87,22 @@ flowchart LR
 ## Tech Stack Summary
 
 
-| Layer           | Technology             | Purpose                                     |
-| --------------- | ---------------------- | ------------------------------------------- |
-| Frontend        | Next.js 14 + React 18  | Web demo, dashboard, playground             |
-| Backend         | FastAPI + Python 3.11+ | Async API server                            |
-| CLI             | Typer                  | Developer command-line interface            |
-| Vector DB       | Actian VectorAI DB     | Semantic retrieval                          |
-| Model Routing   | OpenRouter API         | Multi-model abstraction                     |
-| Fallback LLM    | Gemini API             | Advanced reasoning                          |
-| Auth            | API Key Middleware     | Lightweight endpoint protection             |
-| Caching         | In-memory + SQLite     | Query cache + telemetry storage             |
-| Hosting         | Local (scripts)        | uvicorn + next dev via shell scripts        |
-| Vector DB Infra | Docker (Actian only)   | Actian VectorAI DB runs in Docker container |
+| Layer            | Technology             | Purpose                                     |
+| ---------------- | ---------------------- | ------------------------------------------- |
+| Frontend         | Next.js 14 + React 18  | Web demo, dashboard, playground             |
+| Backend          | FastAPI + Python 3.11+ | Async API server                            |
+| CLI              | Typer                  | Developer command-line interface            |
+| Vector DB        | Actian VectorAI DB     | Semantic retrieval                          |
+| Model Routing    | OpenRouter API         | Multi-model abstraction                     |
+| Fallback LLM     | Gemini API             | Advanced reasoning                          |
+| Auth             | API Key Middleware     | Lightweight endpoint protection             |
+| Caching          | In-memory + SQLite     | Query cache + telemetry storage             |
+| Hosting (local)  | Shell scripts          | uvicorn + next dev via dev.sh               |
+| Hosting (prod)   | Vultr Cloud Compute    | Docker Compose on Optimized VPS             |
+| Reverse Proxy    | Caddy                  | Automatic HTTPS + routing on Vultr          |
+| Containerization | Docker + Compose       | Orchestrates all services for deployment    |
+| Package Dist     | PyPI (pip)             | `pip install tokensense` for CLI            |
+| Vector DB Infra  | Docker (Actian only)   | Actian VectorAI DB runs in Docker container |
 
 
 ---
@@ -206,6 +213,128 @@ Simple API key middleware (`utils/auth.py`):
 
 ---
 
+## Phase 6: Vultr Cloud Deployment
+
+Deploy the full TokenSense stack to Vultr Cloud so users can `pip install tokensense` and connect to a hosted API — no local Docker, no cloning, no backend setup on their end.
+
+### Why Vultr
+
+Vultr is a hackathon track sponsor. TokenSense uses Vultr Optimized Cloud Compute to host the entire production infrastructure — backend API, vector database, and web dashboard — behind HTTPS with automatic TLS certificates.
+
+### Architecture on Vultr
+
+```
+User's Machine                           Vultr Cloud Compute
+─────────────                           ────────────────────
+                                      ┌───────────────────────────┐
+pip install tokensense                │  Ubuntu 22.04 VPS         │
+     │                                │                           │
+     │  tokensense init --demo        │  ┌───────────────────┐   │
+     │  tokensense index              │  │ Caddy (HTTPS)     │   │
+     │  tokensense ask  ──────────────┼──│  :443 → :8000     │   │
+     │                                │  │  :443 → :3000     │   │
+     │  Browser ──────────────────────┼──│                    │   │
+     │                                │  └───────┬───────────┘   │
+                                      │          │               │
+                                      │  ┌───────▼───────────┐   │
+                                      │  │ FastAPI Backend    │   │
+                                      │  │  :8000 (internal)  │   │
+                                      │  └───────┬───────────┘   │
+                                      │          │               │
+                                      │  ┌───────▼───────────┐   │
+                                      │  │ Actian VectorAI DB │   │
+                                      │  │  :50051 (internal) │   │
+                                      │  └───────────────────┘   │
+                                      │                           │
+                                      │  ┌───────────────────┐   │
+                                      │  │ Next.js Frontend   │   │
+                                      │  │  :3000 (internal)  │   │
+                                      │  └───────────────────┘   │
+                                      │                           │
+                                      └───────────────────────────┘
+```
+
+### Vultr Deployment Steps
+
+
+| #   | Task                        | Description                                                              | Time   |
+| --- | --------------------------- | ------------------------------------------------------------------------ | ------ |
+| 6.1 | Create `backend/Dockerfile` | Containerize FastAPI + Actian client                                     | 10 min |
+| 6.2 | Create `deploy/Caddyfile`   | HTTPS reverse proxy for api + frontend subdomains                        | 5 min  |
+| 6.3 | Create `docker-compose.yml` | Orchestrate Actian + backend + frontend + Caddy                          | 15 min |
+| 6.4 | Provision Vultr instance    | Optimized Cloud Compute, Ubuntu 22.04, $12/mo                            | 10 min |
+| 6.5 | Server setup                | SSH in, install Docker, clone repo, configure `.env`                     | 15 min |
+| 6.6 | Configure domain DNS        | Point `api.tokensense.dev` + `tokensense.dev` to Vultr IP                | 10 min |
+| 6.7 | Configure Vultr Firewall    | Only ports 22/80/443 open, Actian + backend internal only                | 5 min  |
+| 6.8 | Add CLI `--demo` flag       | `tokensense init --demo` auto-sets hosted API URL                        | 5 min  |
+| 6.9 | End-to-end verification     | Test `pip install tokensense` → init → index → ask from external machine | 10 min |
+
+
+### Vultr Services Used
+
+
+| Vultr Service               | Purpose in TokenSense                                           |
+| --------------------------- | --------------------------------------------------------------- |
+| **Optimized Cloud Compute** | Hosts all containers (backend, Actian DB, frontend, Caddy)      |
+| **Vultr Firewall**          | Secures infrastructure — only HTTPS exposed, vector DB internal |
+| **Vultr DNS** (optional)    | Manage domain records for `tokensense.dev`                      |
+
+
+### Docker Compose Services
+
+
+| Service    | Image                            | Ports            | Notes                          |
+| ---------- | -------------------------------- | ---------------- | ------------------------------ |
+| `actian`   | `actian/vectorai-db`             | 50051 (internal) | Vector database, never exposed |
+| `backend`  | Built from `backend/Dockerfile`  | 8000 (internal)  | FastAPI, depends on actian     |
+| `frontend` | Built from `frontend/Dockerfile` | 3000 (internal)  | Next.js, depends on backend    |
+| `caddy`    | `caddy:2-alpine`                 | 80, 443 (public) | Reverse proxy, auto HTTPS      |
+
+
+### Vultr Firewall Rules
+
+
+| Port  | Source       | Purpose                          |
+| ----- | ------------ | -------------------------------- |
+| 22    | Your IP only | SSH access                       |
+| 80    | Anywhere     | HTTP → Caddy redirects to HTTPS  |
+| 443   | Anywhere     | HTTPS (public API + frontend)    |
+| 50051 | Drop         | Actian DB never exposed          |
+| 8000  | Drop         | Backend only reachable via Caddy |
+
+
+### User Experience After Vultr Deployment
+
+```bash
+pip install tokensense
+tokensense init --demo
+# API key: <key>
+tokensense index ./my-project
+tokensense ask "explain the auth flow"
+tokensense stats
+```
+
+No Docker, no cloning, no `.env` file, no backend setup. Just `pip install` and go.
+
+### Vultr Deployment Checklist
+
+```
+[ ] backend/Dockerfile created
+[ ] deploy/Caddyfile created
+[ ] docker-compose.yml created
+[ ] Vultr Optimized Cloud Compute instance provisioned
+[ ] Server setup — Docker installed, repo cloned, .env configured
+[ ] docker compose up -d running all 4 services
+[ ] Domain DNS records pointing to Vultr IP
+[ ] Vultr Firewall rules configured
+[ ] CLI --demo flag added
+[ ] End-to-end test from external machine passes
+```
+
+> **Full Vultr deployment details:** See `docs/BACKEND_PLAN.md` → Phase 6 for step-by-step implementation instructions including Dockerfile contents, Caddyfile config, docker-compose.yml, and server setup script.
+
+---
+
 ## Files to Create
 
 ### Planning Documentation
@@ -222,18 +351,33 @@ TokenSense/
 │   ├── routers/
 │   ├── utils/          # includes auth.py for API key middleware
 │   ├── main.py
+│   ├── Dockerfile       # containerizes backend for Vultr deployment
 │   └── requirements.txt
 ├── frontend/
 │   ├── app/
 │   ├── components/
+│   ├── Dockerfile       # containerizes frontend for Vultr deployment
 │   └── package.json
 ├── cli/
 │   └── tokensense.py
+├── tokensense/           # pip-installable package
+│   ├── __init__.py
+│   └── cli.py
+├── deploy/
+│   ├── Caddyfile         # HTTPS reverse proxy for Vultr
+│   └── setup-vultr.sh    # one-command Vultr server provisioning
 ├── docs/
 │   ├── BACKEND_PLAN.md
-│   └── FRONTEND_PLAN.md
+│   ├── FRONTEND_PLAN.md
+│   └── USER_GUIDE.md
+├── tests/
+│   ├── test_actian_direct.py
+│   └── test_actian_via_api.py
+├── docker-compose.yml    # orchestrates all services for Vultr
+├── pyproject.toml        # pip package config
 ├── dev.sh                # starts backend + frontend locally
 ├── .env.example          # template for environment variables
+├── LICENSE
 └── README.md
 ```
 
