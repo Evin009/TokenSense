@@ -1,6 +1,6 @@
 services:
   actian:
-    image: actian/vectorai-db
+    image: williamimoh/actian-vectorai-db:1.0b
     ports:
       - "50051"
     restart: unless-stopped

@@ -19,11 +19,29 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
+__version__ = "0.1.1"
+
+
+def _version_callback(value: bool) -> None:
+    if value:
+        typer.echo(f"tokensense {__version__}")
+        raise typer.Exit()
+
+
 app = typer.Typer(
     name="tokensense",
     help="TokenSense — AI orchestration engine CLI",
     no_args_is_help=True,
 )
+
+
+@app.callback(invoke_without_command=True)
+def main(
+    version: bool = typer.Option(False, "--version", "-v", callback=_version_callback, is_eager=True, help="Show version and exit."),
+) -> None:
+    pass
+
+
 console = Console()
 
 _CONFIG_DIR = Path.home() / ".tokensense"
@@ -66,7 +84,7 @@ def _handle_http_error(resp: httpx.Response) -> None:
 # ---------------------------------------------------------------------------
 
 
-_DEMO_URL = "https://api.tokensense.dev"
+_DEMO_URL = "http://108.61.192.150:8000"
 
 
 @app.command()
