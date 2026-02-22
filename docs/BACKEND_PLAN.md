@@ -455,3 +455,289 @@ curl -X POST http://localhost:8000/ask \
 curl http://localhost:8000/stats \
   -H "X-API-Key: $TOKENSENSE_API_KEY"
 ```
+
+---
+
+## Phase 6 — Vultr Cloud Deployment
+
+Deploy the full TokenSense stack to Vultr so users can `pip install tokensense` and connect to a hosted API without running anything locally.
+
+### Architecture
+
+```
+User's Machine                           Vultr Cloud Compute
+─────────────                           ────────────────────
+                                      ┌───────────────────────────┐
+pip install tokensense                │  Ubuntu 22.04 VPS         │
+     │                                │                           │
+     │  tokensense init               │  ┌───────────────────┐   │
+     │  tokensense index              │  │ Caddy (HTTPS)     │   │
+     │  tokensense ask  ──────────────┼──│  :443 → :8000     │   │
+     │                                │  │  :443 → :3000     │   │
+     │  Browser ──────────────────────┼──│                    │   │
+     │                                │  └───────┬───────────┘   │
+                                      │          │               │
+                                      │  ┌───────▼───────────┐   │
+                                      │  │ FastAPI Backend    │   │
+                                      │  │  :8000 (internal)  │   │
+                                      │  └───────┬───────────┘   │
+                                      │          │               │
+                                      │  ┌───────▼───────────┐   │
+                                      │  │ Actian VectorAI DB │   │
+                                      │  │  :50051 (internal) │   │
+                                      │  └───────────────────┘   │
+                                      │                           │
+                                      │  ┌───────────────────┐   │
+                                      │  │ Next.js Frontend   │   │
+                                      │  │  :3000 (internal)  │   │
+                                      │  └───────────────────┘   │
+                                      │                           │
+                                      └───────────────────────────┘
+```
+
+---
+
+### Step 6.1 — Create Backend Dockerfile
+
+Create `backend/Dockerfile`:
+
+```dockerfile
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Install Actian VectorAI DB client
+COPY actiancortex-0.1.0b1-py3-none-any.whl .
+RUN pip install actiancortex-0.1.0b1-py3-none-any.whl && rm actiancortex-0.1.0b1-py3-none-any.whl
+
+COPY . .
+
+EXPOSE 8000
+
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+```
+
+---
+
+### Step 6.2 — Create Caddyfile
+
+Create `deploy/Caddyfile` for automatic HTTPS reverse proxy:
+
+```
+api.tokensense.dev {
+    reverse_proxy backend:8000
+}
+
+tokensense.dev {
+    reverse_proxy frontend:3000
+}
+```
+
+Replace `tokensense.dev` with your actual domain. Caddy handles TLS certificate issuance automatically.
+
+---
+
+### Step 6.3 — Create docker-compose.yml
+
+Create `docker-compose.yml` at the project root:
+
+```yaml
+version: "3.9"
+
+services:
+  actian:
+    image: actian/vectorai-db
+    ports:
+      - "50051"
+    restart: unless-stopped
+    volumes:
+      - actian_data:/data
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    env_file: .env
+    environment:
+      - ACTIAN_HOST=actian
+      - ACTIAN_PORT=50051
+    depends_on:
+      - actian
+    ports:
+      - "8000"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    environment:
+      - NEXT_PUBLIC_API_URL=https://api.tokensense.dev
+    depends_on:
+      - backend
+    ports:
+      - "3000"
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+      - frontend
+    restart: unless-stopped
+
+volumes:
+  actian_data:
+  caddy_data:
+  caddy_config:
+```
+
+Key design decisions:
+- Only Caddy exposes ports 80/443 to the public
+- Actian, backend, and frontend are internal-only (no public port bindings)
+- `ACTIAN_HOST=actian` uses Docker's internal DNS to resolve the container
+- Persistent volumes for Actian data and Caddy TLS certificates
+
+---
+
+### Step 6.4 — Provision Vultr Instance
+
+1. Create account at [vultr.com](https://www.vultr.com)
+2. Deploy **Cloud Compute — Optimized** instance:
+   - **OS:** Ubuntu 22.04 LTS
+   - **Plan:** Optimized Cloud Compute, $12/mo (1 vCPU, 2GB RAM) minimum
+   - **Region:** Closest to your demo audience
+   - **Label:** `tokensense-prod`
+3. Note the public IP address
+
+---
+
+### Step 6.5 — Server Setup Script
+
+Create `deploy/setup-vultr.sh` — run this after SSH-ing into the Vultr VPS:
+
+```bash
+#!/bin/bash
+set -e
+
+echo "=== TokenSense — Vultr Server Setup ==="
+
+# 1. Install Docker
+curl -fsSL https://get.docker.com | sh
+systemctl enable docker
+systemctl start docker
+
+# 2. Install Docker Compose plugin
+apt-get update && apt-get install -y docker-compose-plugin
+
+# 3. Clone the repo
+git clone https://github.com/yourusername/TokenSense.git /opt/tokensense
+cd /opt/tokensense
+
+# 4. Create .env from template
+cp .env.example .env
+echo ""
+echo ">>> Edit /opt/tokensense/.env with your real API keys <<<"
+echo ">>> Then run: cd /opt/tokensense && docker compose up -d <<<"
+```
+
+After running the script and editing `.env`:
+
+```bash
+cd /opt/tokensense
+docker compose up -d
+```
+
+Verify:
+
+```bash
+docker compose ps          # all 4 services running
+curl http://localhost:8000/ # {"status":"ok","service":"TokenSense"}
+```
+
+---
+
+### Step 6.6 — Configure Domain DNS
+
+**Option A — Vultr DNS:**
+1. Vultr Dashboard → DNS → Add Domain
+2. Add A record: `tokensense.dev` → `<vultr-ip>`
+3. Add A record: `api.tokensense.dev` → `<vultr-ip>`
+
+**Option B — External registrar:**
+1. In your domain registrar, add A records pointing both subdomains to the Vultr IP
+
+Caddy will automatically obtain HTTPS certificates from Let's Encrypt once DNS propagates.
+
+---
+
+### Step 6.7 — Configure Vultr Firewall
+
+In Vultr Dashboard → Firewall → Create Group → Attach to instance:
+
+| Direction | Protocol | Port  | Source       | Purpose                        |
+| --------- | -------- | ----- | ------------ | ------------------------------ |
+| Inbound   | TCP      | 22    | Your IP only | SSH access                     |
+| Inbound   | TCP      | 80    | Anywhere     | HTTP → Caddy redirects to HTTPS|
+| Inbound   | TCP      | 443   | Anywhere     | HTTPS (public API + frontend)  |
+| Inbound   | TCP      | 50051 | Drop         | Actian DB never exposed        |
+| Inbound   | TCP      | 8000  | Drop         | Backend only reachable via Caddy|
+
+---
+
+### Step 6.8 — Add `--demo` Flag to CLI
+
+Update `tokensense init` to support a `--demo` shortcut:
+
+```
+tokensense init --demo
+```
+
+This auto-sets the API URL to `https://api.tokensense.dev` and only prompts for the API key. Enables a 30-second onboarding experience for new users and hackathon judges.
+
+---
+
+### Step 6.9 — Verify End-to-End
+
+From any machine (not the server):
+
+```bash
+pip install tokensense
+tokensense init --demo
+# API key: <your-key>
+
+tokensense index ./some-project
+tokensense ask "how does authentication work?"
+tokensense stats
+```
+
+In the browser:
+- Visit `https://tokensense.dev` — landing page + playground + dashboard
+- Visit `https://api.tokensense.dev/docs` — FastAPI auto-generated Swagger docs
+
+---
+
+### Vultr Deployment Checklist
+
+```
+[ ] Step 6.1: backend/Dockerfile created
+[ ] Step 6.2: deploy/Caddyfile created
+[ ] Step 6.3: docker-compose.yml created
+[ ] Step 6.4: Vultr instance provisioned (Optimized Cloud Compute)
+[ ] Step 6.5: Server setup — Docker installed, repo cloned, .env configured
+[ ] Step 6.6: Domain DNS records pointing to Vultr IP
+[ ] Step 6.7: Vultr Firewall rules configured (only 22/80/443 open)
+[ ] Step 6.8: CLI --demo flag added to tokensense init
+[ ] Step 6.9: End-to-end test from external machine passes
+[ ] Bonus: docker compose logs shows healthy services, no errors
+```
