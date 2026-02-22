@@ -1,110 +1,36 @@
-# TokenSense Frontend
-
-Premium landing page for TokenSense AI Orchestration Engine.
-
-## Tech Stack
-
-- **Framework:** Next.js 14 (App Router)
-- **Styling:** Tailwind CSS
-- **Typography:** JetBrains Mono (via next/font/google)
-- **Language:** TypeScript
-
-## Design System
-
-### Colors (Dark Terminal Theme)
-
-```css
---bg-page: #050508       /* Deep black canvas */
---bg-surface: #0D0D12    /* Card/panel backgrounds */
---bg-elevated: #16161D   /* Elevated surfaces */
---border: #1E1E28        /* Borders, dividers */
---border-dim: #121218    /* Subtle dividers */
-
---text: #E4E4E7          /* Primary text */
---text-muted: #6B6B7B    /* Secondary text */
---text-dim: #4A4A56      /* Placeholder, hints */
-
---accent: #00FF88        /* Primary accent (terminal green) */
---accent-alt: #FF6600    /* Secondary accent (orange) */
-
---success: #22C55E       /* Success states */
---error: #EF4444         /* Error states */
---info: #3B82F6          /* Info states */
-```
-
-### Typography
-
-- **Font:** JetBrains Mono (all weights: 400, 500, 600, 700, 800)
-- **Headings:** 700–800 weight
-- **Body:** 400–500 weight
-- **Labels:** Uppercase with increased letter-spacing
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
 
-### Installation
-
-```bash
-cd frontend
-npm install
-```
-
-### Development
+First, run the development server:
 
 ```bash
 npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-### Build
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-```bash
-npm run build
-npm start
-```
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-## Project Structure
+## Learn More
 
-```
-frontend/
-├── src/
-│   └── app/
-│       ├── layout.tsx          # Root layout with JetBrains Mono
-│       ├── page.tsx            # Landing page (to be implemented)
-│       └── globals.css         # Global styles
-├── tailwind.config.ts          # Tailwind configuration
-├── tsconfig.json              # TypeScript configuration
-└── package.json               # Dependencies
-```
+To learn more about Next.js, take a look at the following resources:
 
-## Landing Page Sections
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-1. **Navbar** - Sticky navigation with green accent border
-2. **Hero** - Cryptic headline with AI orchestration engine badge
-3. **Metrics Ticker** - Real-time stats display
-4. **Agent Pipeline** - Visual flow of the 5-agent system
-5. **Agent Status Grid** - 5 cards showing online status
-6. **CLI Demo** - Terminal-style output simulation
-7. **Stats Bar** - Token reduction, backends, overhead metrics
-8. **Before/After Comparison** - Visual token savings
-9. **System Specs** - Technical specifications table
-10. **Integrations** - Compatible systems chips
-11. **Footer** - Links and branding
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-## Design Reference
+## Deploy on Vercel
 
-The visual design is available in `/design.pen` - a dark, terminal-aesthetic landing page with:
-- Terminal green (#00FF88) accent color
-- Monospace typography throughout
-- Sharp corners (0px radius)
-- Pulsing status indicators
-- ASCII-style pipeline visualization
-- Code-first aesthetic
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-## Notes
-
-- All sections use JetBrains Mono exclusively
-- No rounded corners (0px radius)
-- Minimal shadows
-- Green accent for active states and CTAs
-- Dark mode only (no light theme)
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
