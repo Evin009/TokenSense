@@ -19,74 +19,169 @@ import {
 } from "@/lib/utils"
 import type { StatsResponse, QueryRecord } from "@/lib/types"
 
+// ── Icons ─────────────────────────────────────────────────────
+
+function IconGrid({ size = 16, color = "currentColor" }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill={color}>
+      <rect x="1" y="1" width="6" height="6" rx="1" />
+      <rect x="9" y="1" width="6" height="6" rx="1" />
+      <rect x="1" y="9" width="6" height="6" rx="1" />
+      <rect x="9" y="9" width="6" height="6" rx="1" />
+    </svg>
+  )
+}
+
+function IconTerminal({ size = 16, color = "currentColor" }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke={color} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1" y="2" width="14" height="12" rx="1.5" fill={color} fillOpacity="0.12" stroke={color} />
+      <polyline points="4,6 7.5,8 4,10" />
+      <line x1="9" y1="10" x2="12" y2="10" />
+    </svg>
+  )
+}
+
+function IconKey({ size = 16, color = "currentColor" }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke={color} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="5.5" cy="8" r="3.5" fill={color} fillOpacity="0.15" />
+      <line x1="8.5" y1="8" x2="15" y2="8" />
+      <line x1="13" y1="6.5" x2="13" y2="8" />
+      <line x1="15" y1="6.5" x2="15" y2="8" />
+    </svg>
+  )
+}
+
+function IconFile({ size = 16, color = "currentColor" }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 1.5h6.5l3 3V14.5H3V1.5z" fill={color} fillOpacity="0.12" />
+      <polyline points="9.5,1.5 9.5,4.5 12.5,4.5" />
+      <line x1="5" y1="7" x2="11" y2="7" />
+      <line x1="5" y1="10" x2="11" y2="10" />
+    </svg>
+  )
+}
+
+function IconChevronLeft({ size = 14, color = "currentColor" }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 14 14" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="9,3 5,7 9,11" />
+    </svg>
+  )
+}
+
+function IconChevronRight({ size = 14, color = "currentColor" }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 14 14" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="5,3 9,7 5,11" />
+    </svg>
+  )
+}
+
 // ── Sidebar ───────────────────────────────────────────────────
 
 const SIDEBAR_NAV = [
-  { label: "Overview", href: "/dashboard", icon: "▦" },
-  { label: "Playground", href: "/playground", icon: "⌨" },
-  { label: "API Keys", href: "#", icon: "🔑", disabled: true },
-  { label: "Docs", href: "/docs", icon: "📄" },
+  { label: "Overview", href: "/dashboard", Icon: IconGrid, active: true },
+  { label: "Playground", href: "/playground", Icon: IconTerminal },
+  { label: "API Keys", href: "#", Icon: IconKey, disabled: true },
+  { label: "Docs", href: "/docs", Icon: IconFile },
 ]
 
-function Sidebar() {
+function Sidebar({ open, onToggle }: { open: boolean; onToggle: () => void }) {
   return (
     <aside
-      className="flex flex-col h-full w-60 shrink-0"
+      className="flex flex-col h-full shrink-0 overflow-hidden"
       style={{
+        width: open ? 240 : 60,
+        transition: "width 0.22s cubic-bezier(0.4,0,0.2,1)",
         background: "#0D0D12",
         borderRight: "1px solid rgba(255,255,255,0.07)",
       }}
     >
-      {/* Logo */}
-      <div className="px-6 pt-7 pb-2">
-        <span className="text-ts-accent font-mono text-sm font-bold tracking-wider">
-          TokenSense
-        </span>
+      {/* Logo + toggle */}
+      <div
+        className="flex items-center justify-between px-4 pt-6 pb-2 shrink-0"
+        style={{ minHeight: 56 }}
+      >
+        {open && (
+          <span className="text-ts-accent font-mono text-sm font-bold tracking-wider whitespace-nowrap overflow-hidden">
+            TokenSense
+          </span>
+        )}
+        <button
+          onClick={onToggle}
+          className="flex items-center justify-center w-7 h-7 rounded transition-colors hover:bg-white/5 shrink-0"
+          style={{ marginLeft: open ? 0 : "auto", marginRight: open ? 0 : "auto" }}
+          title={open ? "Collapse sidebar" : "Expand sidebar"}
+        >
+          {open
+            ? <IconChevronLeft color="#6B6B7B" />
+            : <IconChevronRight color="#6B6B7B" />
+          }
+        </button>
       </div>
 
       {/* Nav */}
-      <nav className="flex flex-col gap-1 px-4 pt-8 flex-1">
-        {SIDEBAR_NAV.map(({ label, href, icon, disabled }) => (
-          <Link
-            key={label}
-            href={disabled ? "#" : href}
-            className={`flex items-center gap-3 h-10 px-3 font-mono text-xs font-medium transition-colors ${
-              label === "Overview"
-                ? "text-ts-accent"
-                : disabled
-                ? "text-ts-dim cursor-not-allowed opacity-50"
-                : "text-ts-muted hover:text-ts-text"
-            }`}
-            style={
-              label === "Overview"
-                ? {
-                    background: "rgba(0,255,136,0.08)",
-                    borderLeft: "2px solid #00FF88",
-                  }
-                : { paddingLeft: "14px" }
-            }
-          >
-            <span className="text-base">{icon}</span>
-            {label}
-          </Link>
-        ))}
+      <nav className="flex flex-col gap-0.5 px-2 pt-6 flex-1">
+        {SIDEBAR_NAV.map(({ label, href, Icon, active, disabled }) => {
+          const iconColor = active ? "#00FF88" : disabled ? "#3A3A46" : "#6B6B7B"
+          return (
+            <Link
+              key={label}
+              href={disabled ? "#" : href}
+              title={!open ? label : undefined}
+              className={`flex items-center gap-3 h-10 rounded transition-colors ${
+                active
+                  ? "text-ts-accent"
+                  : disabled
+                  ? "text-ts-dim cursor-not-allowed opacity-40"
+                  : "text-ts-muted hover:text-ts-text hover:bg-white/[0.04]"
+              }`}
+              style={
+                active
+                  ? {
+                      background: "rgba(0,255,136,0.08)",
+                      borderLeft: "2px solid #00FF88",
+                      paddingLeft: open ? 14 : 18,
+                      paddingRight: 12,
+                    }
+                  : {
+                      paddingLeft: open ? 12 : 20,
+                      paddingRight: 12,
+                    }
+              }
+            >
+              <span className="shrink-0">
+                <Icon size={16} color={iconColor} />
+              </span>
+              {open && (
+                <span className="font-mono text-xs font-medium whitespace-nowrap overflow-hidden">
+                  {label}
+                </span>
+              )}
+            </Link>
+          )
+        })}
       </nav>
 
       {/* User */}
       <div
-        className="flex items-center gap-3 px-5 py-5"
+        className="flex items-center gap-3 px-3 py-4 shrink-0"
         style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
       >
         <div
-          className="w-8 h-8 flex items-center justify-center font-mono text-xs font-bold"
-          style={{
-            background: "rgba(0,255,136,0.2)",
-            color: "#00FF88",
-          }}
+          className="w-8 h-8 flex items-center justify-center font-mono text-xs font-bold shrink-0"
+          style={{ background: "rgba(0,255,136,0.2)", color: "#00FF88" }}
         >
           EB
         </div>
-        <span className="text-ts-text font-mono text-xs font-medium">Evin Bento</span>
+        {open && (
+          <span className="text-ts-text font-mono text-xs font-medium whitespace-nowrap overflow-hidden">
+            Evin Bento
+          </span>
+        )}
       </div>
     </aside>
   )
@@ -216,6 +311,7 @@ export default function DashboardPage() {
   const [sortKey, setSortKey] = useState<SortKey>("timestamp")
   const [sortDir, setSortDir] = useState<SortDir>("desc")
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const [sidebarOpen, setSidebarOpen] = useState(true)
 
   const fetchStats = useCallback(async () => {
     setLoading(true)
@@ -301,7 +397,7 @@ export default function DashboardPage() {
 
   return (
     <div className="flex h-screen bg-ts-page overflow-hidden font-mono">
-      <Sidebar />
+      <Sidebar open={sidebarOpen} onToggle={() => setSidebarOpen((v) => !v)} />
 
       {/* Main */}
       <main className="flex flex-col flex-1 gap-4 p-6 overflow-y-auto">
