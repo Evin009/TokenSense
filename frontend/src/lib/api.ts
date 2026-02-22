@@ -47,14 +47,22 @@ export function setDemoMode(on: boolean) {
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const { url, key } = getConfig()
-  const res = await fetch(`${url}${path}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      "X-API-Key": key,
-      ...options?.headers,
-    },
-  })
+  let res: Response
+  try {
+    res = await fetch(`${url}${path}`, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        "X-API-Key": key,
+        ...options?.headers,
+      },
+    })
+  } catch (e) {
+    const msg = e instanceof TypeError && e.message === "Failed to fetch"
+      ? `Cannot reach API at ${url}. Is the backend running? (Try: docker compose up backend)`
+      : (e instanceof Error ? e.message : "Network error")
+    throw new Error(msg)
+  }
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: `HTTP ${res.status}` }))

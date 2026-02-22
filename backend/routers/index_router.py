@@ -5,7 +5,7 @@ from agents import query_agent, retrieval_agent
 
 router = APIRouter()
 
-_CHUNK_TOKEN_TARGET = 500
+_CHUNK_TOKEN_TARGET = 150  # keep real token count safely under OpenRouter free-tier 337-token limit
 
 
 class FilePayload(BaseModel):

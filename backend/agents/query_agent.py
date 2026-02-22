@@ -40,6 +40,8 @@ def _cached_embed(query: str) -> tuple[float, ...]:
     )
     response.raise_for_status()
     data = response.json()
+    if "error" in data:
+        raise RuntimeError(f"OpenRouter embedding error: {data['error'].get('message', data['error'])}")
     return tuple(data["data"][0]["embedding"])
 
 
