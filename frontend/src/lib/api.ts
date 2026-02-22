@@ -5,7 +5,7 @@ import type {
   StatsResponse, HealthResponse, KeyResponse,
 } from "./types"
 
-const DEMO_URL = "http://108.61.192.150:8000"
+const DEMO_URL = "http://localhost:8000" // Changed to localhost for local dev
 
 function getConfig(): { url: string; key: string } {
   if (typeof window !== "undefined") {

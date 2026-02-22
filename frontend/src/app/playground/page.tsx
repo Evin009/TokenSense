@@ -36,8 +36,8 @@ function SettingsModal({
 
   function handleToggleDemo(on: boolean) {
     setUseDemo(on)
-    if (on) setUrl("http://108.61.192.150:8000")
-    else setUrl("http://localhost:8000")
+    // Using localhost for both demo and local during development
+    setUrl("http://localhost:8000")
   }
 
   function handleSave() {
@@ -72,7 +72,7 @@ function SettingsModal({
           <div>
             <p className="text-ts-text font-mono text-sm font-semibold">Use Demo Server</p>
             <p className="text-ts-muted font-mono text-xs mt-0.5">
-              Connect to hosted demo at 108.61.192.150
+              Connect to local backend at localhost:8000
             </p>
           </div>
           <button
