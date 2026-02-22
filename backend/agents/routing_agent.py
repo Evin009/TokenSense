@@ -57,7 +57,7 @@ async def _call_gemini(context: str, query: str) -> str:
 
     async with httpx.AsyncClient(timeout=60.0) as client:
         response = await client.post(
-            f"{_GEMINI_BASE}/gemini-pro:generateContent?key={_GEMINI_KEY}",
+            f"{_GEMINI_BASE}/gemini-1.5-flash:generateContent?key={_GEMINI_KEY}",
             headers={"Content-Type": "application/json"},
             json={"contents": [{"parts": [{"text": prompt}]}]},
         )

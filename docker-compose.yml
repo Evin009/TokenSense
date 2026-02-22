@@ -29,6 +29,7 @@ services:
       dockerfile: Dockerfile
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_API_KEY=ts-df41bda6ef14a09545a68e5851779f1a966c49108007cb4e
     depends_on:
       - backend
     ports:
