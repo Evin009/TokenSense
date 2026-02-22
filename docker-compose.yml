@@ -21,18 +21,17 @@ services:
       - "8000:8000"
     restart: unless-stopped
 
-  # frontend: Uncomment after Phase 3 (Next.js) is built
-  # frontend:
-  #   build:
-  #     context: ./frontend
-  #     dockerfile: Dockerfile
-  #   environment:
-  #     - NEXT_PUBLIC_API_URL=http://<VULTR_IP>:8000
-  #   depends_on:
-  #     - backend
-  #   ports:
-  #     - "3000:3000"
-  #   restart: unless-stopped
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    environment:
+      - NEXT_PUBLIC_API_URL=http://108.61.192.150:8000
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
 
   # Caddy: Uncomment if using a domain with HTTPS
   # caddy:

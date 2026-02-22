@@ -21,7 +21,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={jetbrainsMono.variable}>
       <body className="font-mono antialiased bg-ts-page text-ts-text min-h-screen">
-        {children}
+        <div className="page-transition">
+          {children}
+        </div>
       </body>
     </html>
   )

@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { Navbar } from "@/components/navbar"
+import { CopyButton } from "@/components/copy-button"
 
 // ── Data ─────────────────────────────────────────────────────
 
@@ -138,11 +139,12 @@ export default function LandingPage() {
         >
           <span className="text-ts-accent font-mono text-lg font-bold">$</span>
           <span
-            className="font-mono font-semibold"
+            className="font-mono font-semibold flex-1"
             style={{ color: "#E2E8F0", fontSize: "16px", letterSpacing: "0.5px" }}
           >
             pip install tokensense
           </span>
+          <CopyButton text="pip install tokensense" />
         </div>
         <p
           className="font-mono text-sm opacity-80"
