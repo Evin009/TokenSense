@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "telemetry.db")
 
-_CREATE_TABLE = """
+_CREATE_TELEMETRY = """
 CREATE TABLE IF NOT EXISTS telemetry (
     id               INTEGER PRIMARY KEY AUTOINCREMENT,
     timestamp        TEXT    NOT NULL,
@@ -18,12 +18,47 @@ CREATE TABLE IF NOT EXISTS telemetry (
 );
 """
 
+_CREATE_API_KEYS = """
+CREATE TABLE IF NOT EXISTS api_keys (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    key          TEXT    NOT NULL UNIQUE,
+    label        TEXT,
+    created_at   TEXT    NOT NULL,
+    last_used_at TEXT
+);
+"""
+
 
 async def init_db() -> None:
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     async with aiosqlite.connect(DB_PATH) as db:
-        await db.execute(_CREATE_TABLE)
+        await db.execute(_CREATE_TELEMETRY)
+        await db.execute(_CREATE_API_KEYS)
         await db.commit()
+
+
+async def create_api_key(key: str, label: str = "") -> None:
+    now = datetime.now(timezone.utc).isoformat()
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "INSERT INTO api_keys (key, label, created_at) VALUES (?, ?, ?)",
+            (key, label, now),
+        )
+        await db.commit()
+
+
+async def validate_api_key(key: str) -> bool:
+    now = datetime.now(timezone.utc).isoformat()
+    async with aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute("SELECT id FROM api_keys WHERE key = ?", (key,))
+        row = await cursor.fetchone()
+        if row:
+            await db.execute(
+                "UPDATE api_keys SET last_used_at = ? WHERE key = ?", (now, key)
+            )
+            await db.commit()
+            return True
+        return False
 
 
 async def log_query(record: dict) -> int:

@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from utils.db import init_db
-from routers import index_router, ask_router, optimize_router, stats_router
+from routers import index_router, ask_router, optimize_router, stats_router, keys_router
 
 # Configure logging
 logging.basicConfig(
@@ -36,6 +36,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(keys_router.router, prefix="/keys", tags=["Keys"])
 app.include_router(index_router.router, prefix="/index", tags=["Index"])
 app.include_router(ask_router.router, prefix="/ask", tags=["Ask"])
 app.include_router(optimize_router.router, prefix="/optimize", tags=["Optimize"])
