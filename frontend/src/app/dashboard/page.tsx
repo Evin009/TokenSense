@@ -80,16 +80,30 @@ function IconChevronRight({ size = 14, color = "currentColor" }: { size?: number
   )
 }
 
+// ── Section type ──────────────────────────────────────────────
+
+type Section = "overview" | "api-keys"
+
 // ── Sidebar ───────────────────────────────────────────────────
 
 const SIDEBAR_NAV = [
-  { label: "Overview", href: "/dashboard", Icon: IconGrid, active: true },
+  { label: "Overview", section: "overview" as Section, Icon: IconGrid },
   { label: "Playground", href: "/playground", Icon: IconTerminal },
-  { label: "API Keys", href: "#", Icon: IconKey, disabled: true },
+  { label: "API Keys", section: "api-keys" as Section, Icon: IconKey },
   { label: "Docs", href: "/docs", Icon: IconFile },
 ]
 
-function Sidebar({ open, onToggle }: { open: boolean; onToggle: () => void }) {
+function Sidebar({
+  open,
+  onToggle,
+  activeSection,
+  onSectionChange,
+}: {
+  open: boolean
+  onToggle: () => void
+  activeSection: Section
+  onSectionChange: (s: Section) => void
+}) {
   return (
     <aside
       className="flex flex-col h-full shrink-0 overflow-hidden"
@@ -116,42 +130,57 @@ function Sidebar({ open, onToggle }: { open: boolean; onToggle: () => void }) {
           style={{ marginLeft: open ? 0 : "auto", marginRight: open ? 0 : "auto" }}
           title={open ? "Collapse sidebar" : "Expand sidebar"}
         >
-          {open
-            ? <IconChevronLeft color="#6B6B7B" />
-            : <IconChevronRight color="#6B6B7B" />
-          }
+          {open ? <IconChevronLeft color="#6B6B7B" /> : <IconChevronRight color="#6B6B7B" />}
         </button>
       </div>
 
       {/* Nav */}
       <nav className="flex flex-col gap-0.5 px-2 pt-6 flex-1">
-        {SIDEBAR_NAV.map(({ label, href, Icon, active, disabled }) => {
-          const iconColor = active ? "#00FF88" : disabled ? "#3A3A46" : "#6B6B7B"
+        {SIDEBAR_NAV.map(({ label, section, href, Icon }) => {
+          const isActive = section ? activeSection === section : false
+          const iconColor = isActive ? "#00FF88" : "#6B6B7B"
+          const commonClass = `flex items-center gap-3 h-10 rounded transition-colors ${
+            isActive
+              ? "text-ts-accent"
+              : "text-ts-muted hover:text-ts-text hover:bg-white/[0.04]"
+          }`
+          const commonStyle = isActive
+            ? {
+                background: "rgba(0,255,136,0.08)",
+                borderLeft: "2px solid #00FF88",
+                paddingLeft: open ? 14 : 18,
+                paddingRight: 12,
+              }
+            : { paddingLeft: open ? 12 : 20, paddingRight: 12 }
+
+          if (section) {
+            return (
+              <button
+                key={label}
+                onClick={() => onSectionChange(section)}
+                title={!open ? label : undefined}
+                className={`w-full text-left ${commonClass}`}
+                style={commonStyle}
+              >
+                <span className="shrink-0">
+                  <Icon size={16} color={iconColor} />
+                </span>
+                {open && (
+                  <span className="font-mono text-xs font-medium whitespace-nowrap overflow-hidden">
+                    {label}
+                  </span>
+                )}
+              </button>
+            )
+          }
+
           return (
             <Link
               key={label}
-              href={disabled ? "#" : href}
+              href={href!}
               title={!open ? label : undefined}
-              className={`flex items-center gap-3 h-10 rounded transition-colors ${
-                active
-                  ? "text-ts-accent"
-                  : disabled
-                  ? "text-ts-dim cursor-not-allowed opacity-40"
-                  : "text-ts-muted hover:text-ts-text hover:bg-white/[0.04]"
-              }`}
-              style={
-                active
-                  ? {
-                      background: "rgba(0,255,136,0.08)",
-                      borderLeft: "2px solid #00FF88",
-                      paddingLeft: open ? 14 : 18,
-                      paddingRight: 12,
-                    }
-                  : {
-                      paddingLeft: open ? 12 : 20,
-                      paddingRight: 12,
-                    }
-              }
+              className={commonClass}
+              style={commonStyle}
             >
               <span className="shrink-0">
                 <Icon size={16} color={iconColor} />
@@ -184,6 +213,192 @@ function Sidebar({ open, onToggle }: { open: boolean; onToggle: () => void }) {
         )}
       </div>
     </aside>
+  )
+}
+
+// ── API Keys Panel ─────────────────────────────────────────────
+
+const STORAGE_KEY = "tokensense_api_key"
+
+function generateKey(): string {
+  const hex = () => Math.floor(Math.random() * 0xffffffff).toString(16).padStart(8, "0")
+  return `ts-${hex()}-${hex()}-${hex()}-${hex()}`
+}
+
+function ApiKeysPanel() {
+  const [apiKey, setApiKey] = useState("")
+  const [copied, setCopied] = useState(false)
+  const [createdAt] = useState(() => new Date().toLocaleDateString())
+
+  useEffect(() => {
+    const stored = localStorage.getItem(STORAGE_KEY)
+    if (stored) {
+      setApiKey(stored)
+    } else {
+      const fresh = generateKey()
+      localStorage.setItem(STORAGE_KEY, fresh)
+      setApiKey(fresh)
+    }
+  }, [])
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(apiKey)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  const handleRegenerate = () => {
+    const fresh = generateKey()
+    localStorage.setItem(STORAGE_KEY, fresh)
+    setApiKey(fresh)
+    setCopied(false)
+  }
+
+  const STEPS = [
+    {
+      n: "01",
+      title: "Add to backend .env",
+      code: `TOKENSENSE_API_KEY=${apiKey || "…"}`,
+    },
+    {
+      n: "02",
+      title: "Initialize the CLI",
+      code: "$ tokensense init --demo",
+      hint: "Paste your key when prompted",
+    },
+    {
+      n: "03",
+      title: "Start querying",
+      code: '$ tokensense ask "explain the auth flow"',
+    },
+  ]
+
+  return (
+    <div className="flex flex-col gap-6 max-w-[720px]">
+      {/* Header */}
+      <div className="flex flex-col gap-1">
+        <span className="text-ts-accent font-mono text-xs font-bold tracking-[1.5px]">
+          API_KEY_MANAGEMENT
+        </span>
+        <h2 className="text-ts-text font-mono text-2xl font-bold">API Keys</h2>
+        <p className="text-ts-muted font-mono text-sm">
+          Your secret key authenticates CLI and direct API calls.
+        </p>
+      </div>
+
+      {/* Key card */}
+      <div
+        className="flex flex-col gap-4 p-6"
+        style={{ background: "#0D0D12", border: "1px solid rgba(0,255,136,0.25)" }}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-0.5">
+            <span className="text-ts-text font-mono text-xs font-bold">Default Key</span>
+            <span className="text-ts-dim font-mono text-xs">Created {createdAt}</span>
+          </div>
+          <span
+            className="font-mono text-xs px-2 py-0.5"
+            style={{
+              color: "#00FF88",
+              border: "1px solid rgba(0,255,136,0.3)",
+              background: "rgba(0,255,136,0.06)",
+            }}
+          >
+            ACTIVE
+          </span>
+        </div>
+
+        {/* Key display */}
+        <div
+          className="flex items-center gap-3 px-4 py-3"
+          style={{ background: "#050508", border: "1px solid #1E1E28" }}
+        >
+          <span
+            className="font-mono text-sm flex-1 break-all"
+            style={{ color: "#00FF88", letterSpacing: "0.5px" }}
+          >
+            {apiKey || "generating…"}
+          </span>
+          <button
+            onClick={handleCopy}
+            className="flex items-center gap-1.5 px-3 py-1 font-mono text-xs font-bold shrink-0 transition-all"
+            style={{
+              color: copied ? "#050508" : "#00FF88",
+              background: copied ? "#00FF88" : "rgba(0,255,136,0.08)",
+              border: "1px solid #00FF88",
+            }}
+          >
+            {copied ? "✓ COPIED" : "COPY"}
+          </button>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <p className="text-ts-dim font-mono text-xs">
+            Keep this key secret. Never commit it to version control.
+          </p>
+          <button
+            onClick={handleRegenerate}
+            className="font-mono text-xs text-ts-muted hover:text-ts-accent transition-colors shrink-0"
+          >
+            ↻ Regenerate
+          </button>
+        </div>
+      </div>
+
+      {/* Setup guide */}
+      <div
+        className="flex flex-col gap-0"
+        style={{ border: "1px solid rgba(255,255,255,0.07)" }}
+      >
+        <div
+          className="px-5 py-3"
+          style={{
+            background: "rgba(0,255,136,0.04)",
+            borderBottom: "1px solid rgba(255,255,255,0.06)",
+          }}
+        >
+          <span className="text-ts-muted font-mono text-xs font-bold tracking-wider">
+            SETUP GUIDE
+          </span>
+        </div>
+
+        {STEPS.map((step, i) => (
+          <div
+            key={step.n}
+            className="flex gap-5 px-5 py-4"
+            style={{
+              borderBottom: i < STEPS.length - 1 ? "1px solid rgba(255,255,255,0.04)" : undefined,
+            }}
+          >
+            <span
+              className="font-mono text-xs font-bold shrink-0 mt-0.5"
+              style={{ color: "#00FF88" }}
+            >
+              {step.n}
+            </span>
+            <div className="flex flex-col gap-2 flex-1">
+              <span className="text-ts-text font-mono text-xs font-semibold">
+                {step.title}
+              </span>
+              <div
+                className="px-3 py-2"
+                style={{ background: "#050508", border: "1px solid #1E1E28" }}
+              >
+                <span
+                  className="font-mono text-xs break-all"
+                  style={{ color: "#94A3B8" }}
+                >
+                  {step.code}
+                </span>
+              </div>
+              {step.hint && (
+                <span className="text-ts-dim font-mono text-xs">{step.hint}</span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }
 
@@ -312,6 +527,7 @@ export default function DashboardPage() {
   const [sortDir, setSortDir] = useState<SortDir>("desc")
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [activeSection, setActiveSection] = useState<Section>("overview")
 
   const fetchStats = useCallback(async () => {
     setLoading(true)
@@ -397,10 +613,22 @@ export default function DashboardPage() {
 
   return (
     <div className="flex h-screen bg-ts-page overflow-hidden font-mono">
-      <Sidebar open={sidebarOpen} onToggle={() => setSidebarOpen((v) => !v)} />
+      <Sidebar
+        open={sidebarOpen}
+        onToggle={() => setSidebarOpen((v) => !v)}
+        activeSection={activeSection}
+        onSectionChange={setActiveSection}
+      />
 
       {/* Main */}
       <main className="flex flex-col flex-1 gap-4 p-6 overflow-y-auto">
+
+        {/* API Keys section */}
+        {activeSection === "api-keys" && <ApiKeysPanel />}
+
+        {/* Overview section */}
+        {activeSection === "overview" && <>
+
         {/* Top bar */}
         <div
           className="flex items-center justify-between pb-3.5"
@@ -666,6 +894,8 @@ export default function DashboardPage() {
             </button>
           )}
         </div>
+
+        </>} {/* end overview section */}
       </main>
     </div>
   )
