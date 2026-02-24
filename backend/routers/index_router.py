@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends
+import os
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from utils.auth import verify_api_key
 from agents import query_agent, retrieval_agent
@@ -6,15 +7,12 @@ from agents import query_agent, retrieval_agent
 router = APIRouter()
 
 _CHUNK_TOKEN_TARGET = 150  # keep real token count safely under OpenRouter free-tier 337-token limit
-
-
-class FilePayload(BaseModel):
-    source: str
-    content: str
+_DEFAULT_EXTENSIONS = {".py", ".md", ".txt", ".js", ".ts", ".jsx", ".tsx", ".rst", ".yaml", ".yml"}
 
 
 class IndexRequest(BaseModel):
-    files: list[FilePayload]
+    path: str
+    file_extensions: list[str] = list(_DEFAULT_EXTENSIONS)
 
 
 class IndexResponse(BaseModel):
@@ -45,25 +43,38 @@ def _split_into_chunks(text: str, target_tokens: int = _CHUNK_TOKEN_TARGET) -> l
 
 
 @router.post("", response_model=IndexResponse, dependencies=[Depends(verify_api_key)])
-async def index_files(req: IndexRequest) -> IndexResponse:
+async def index_directory(req: IndexRequest) -> IndexResponse:
+    if not os.path.exists(req.path):
+        raise HTTPException(status_code=400, detail=f"Path not found: {req.path}")
+
+    extensions = set(req.file_extensions)
     indexed_files = 0
     total_chunks = 0
 
-    for file in req.files:
-        if not file.content.strip():
-            continue
+    for root, _dirs, files in os.walk(req.path):
+        for filename in files:
+            if os.path.splitext(filename)[1] not in extensions:
+                continue
+            filepath = os.path.join(root, filename)
+            try:
+                with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
+                    content = f.read()
+            except OSError:
+                continue
 
-        raw_chunks = _split_into_chunks(file.content)
+            if not content.strip():
+                continue
 
-        chunk_batch = []
-        for chunk in raw_chunks:
-            embedding = await query_agent.embed(chunk)
-            chunk_batch.append({"content": chunk, "embedding": embedding, "source": file.source})
+            raw_chunks = _split_into_chunks(content)
+            chunk_batch = []
+            for chunk in raw_chunks:
+                embedding = await query_agent.embed(chunk)
+                chunk_batch.append({"content": chunk, "embedding": embedding, "source": filepath})
 
-        if chunk_batch:
-            await retrieval_agent.batch_store(chunk_batch)
-            total_chunks += len(chunk_batch)
+            if chunk_batch:
+                await retrieval_agent.batch_store(chunk_batch)
+                total_chunks += len(chunk_batch)
 
-        indexed_files += 1
+            indexed_files += 1
 
     return IndexResponse(indexed_files=indexed_files, chunks=total_chunks, status="ok")

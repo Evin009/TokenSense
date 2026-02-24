@@ -15,6 +15,7 @@ sys.path.insert(
 )
 
 import pytest
+from unittest.mock import AsyncMock
 
 
 # ── Shared constants ──────────────────────────────────────────────────────────
@@ -34,9 +35,11 @@ def patch_auth_key(monkeypatch, api_key):
     """
     Patch the in-memory API key used by verify_api_key so tests work
     without a real .env file.  Runs automatically for every test.
+    Stubs validate_api_key so no real DB is touched for simple auth tests.
     """
     import utils.auth as auth_mod
-    monkeypatch.setattr(auth_mod, "_API_KEY", api_key)
+    monkeypatch.setattr(auth_mod, "_MASTER_KEY", api_key)
+    monkeypatch.setattr(auth_mod, "validate_api_key", AsyncMock(return_value=False))
 
 
 @pytest.fixture(autouse=True)

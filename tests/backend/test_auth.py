@@ -1,6 +1,7 @@
 """Tests for utils/auth.py — API key middleware."""
 
 import pytest
+from unittest.mock import AsyncMock
 from fastapi import HTTPException
 from utils.auth import verify_api_key
 
@@ -25,16 +26,17 @@ async def test_empty_key_raises_401(api_key):
     assert exc_info.value.status_code == 401
 
 
-async def test_unconfigured_server_key_raises_500(monkeypatch):
+async def test_unconfigured_server_key_raises_401(monkeypatch):
     """
-    If the server has no key configured (mis-deployment), every request
-    must return 500 rather than silently accepting any input.
+    If the server has no master key configured and the key is not in the DB,
+    every request must return 401.
     """
     import utils.auth as auth_mod
-    monkeypatch.setattr(auth_mod, "_API_KEY", "")
+    monkeypatch.setattr(auth_mod, "_MASTER_KEY", "")
+    monkeypatch.setattr(auth_mod, "validate_api_key", AsyncMock(return_value=False))
     with pytest.raises(HTTPException) as exc_info:
         await verify_api_key(x_api_key="any-key")
-    assert exc_info.value.status_code == 500
+    assert exc_info.value.status_code == 401
 
 
 async def test_key_comparison_is_exact(api_key):
