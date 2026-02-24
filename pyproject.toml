@@ -39,10 +39,10 @@ dev = [
 tokensense = "tokensense.cli:app"
 
 [project.urls]
-Homepage = "https://github.com/yourusername/TokenSense"
-Documentation = "https://github.com/yourusername/TokenSense/tree/main/docs"
-Repository = "https://github.com/yourusername/TokenSense"
-Issues = "https://github.com/yourusername/TokenSense/issues"
+Homepage = "https://github.com/Evin009/TokenSense"
+Documentation = "https://github.com/Evin009/TokenSense/ReadMe.md"
+Repository = "https://github.com/Evin009/TokenSense"
+Issues = "https://github.com/Evin009/TokenSense/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["tokensense"]
